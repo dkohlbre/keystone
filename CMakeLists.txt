@@ -36,8 +36,8 @@ set(bootrom_srcdir ${CMAKE_SOURCE_DIR}/bootrom)
 set(bootrom_wrkdir ${CMAKE_BINARY_DIR}/bootrom.build)
 set(qemu_wrkdir ${CMAKE_SOURCE_DIR}/qemu)
 set(qemu_srcdir ${CMAKE_SOURCE_DIR}/qemu)
-set(sm_srcdir ${CMAKE_SOURCE_DIR}/riscv-pk)
-set(sm_wrkdir ${CMAKE_BINARY_DIR}/riscv-pk.build)
+set(sm_srcdir ${CMAKE_SOURCE_DIR}/opensbi)
+set(sm_wrkdir ${CMAKE_BINARY_DIR}/opensbi.build)
 set(buildroot_srcdir ${CMAKE_SOURCE_DIR}/buildroot)
 set(buildroot_wrkdir ${CMAKE_BINARY_DIR}/buildroot.build)
 set(buildroot_config ${confdir}/qemu_riscv${BITS}_virt_defconfig)
@@ -125,7 +125,7 @@ if(initramfs)
       O=${linux_wrkdir} CONFIG_INITRAMFS_SOURCE="${confdir}/initramfs.txt ${initramfs_sysroot}"
       CONFIG_INITRAMFS_ROOT_UID=${uid} CONFIG_INITRAMFS_ROOT_GID=${gid}
       CONFIG_DEVTMPFS=y CONFIG_DEVTMPFS_MOUNT=y
-      CROSS_COMPILE=${cross_compile} ARCH=riscv vmlinux
+      CROSS_COMPILE=${cross_compile} ARCH=riscv
     COMMAND ${cross_compile}strip -o ${linux_vmlinux_stripped} ${linux_vmlinux}
     COMMENT "Building linux (initramfs)"
   )
@@ -153,9 +153,7 @@ add_custom_target("driver" ALL DEPENDS ${driver_srcdir} ${linux_srcdir} ${linux_
 add_custom_command(OUTPUT ${sm_wrkdir} COMMAND mkdir -p ${sm_wrkdir})
 add_custom_target("sm" ALL DEPENDS ${sm_srcdir} ${sm_wrkdir} ${linux_vmlinux_stripped} WORKING_DIRECTORY ${sm_wrkdir}
   COMMAND ln -rsnf ${sm_srcdir}/${enabled_sm} ${sm_srcdir}/sm
-  COMMAND ${sm_srcdir}/configure --host=riscv${BITS}-unknown-linux-gnu --with-payload=${linux_vmlinux_stripped}
-    --enable-logo --with-logo=${confdir}/sifive_logo.txt --enable-sm --with-target-platform=${platform}
-  COMMAND env CFLAGS='${CFLAGS} -mabi=${ABI} -march=${ISA}' $(MAKE) -C ${sm_wrkdir}
+  COMMAND env CFLAGS='${CFLAGS} -mabi=${ABI} -march=${ISA}' CROSS_COMPILE=riscv64-unknown-elf- $(MAKE) -C ${sm_srcdir} PLATFORM=qemu/virt FW_PAYLOAD_PATH=${linux_wrkdir}/arch/riscv/boot/Image O=${sm_wrkdir}
   COMMENT "Building sm"
 )
 add_dependencies("sm" "linux")
